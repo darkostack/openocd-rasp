@@ -78,6 +78,7 @@ extern struct flash_driver str7x_flash;
 extern struct flash_driver str9x_flash;
 extern struct flash_driver str9xpec_flash;
 extern struct flash_driver tms470_flash;
+extern struct flash_driver vcm3_flash;
 extern struct flash_driver virtual_flash;
 extern struct flash_driver w600_flash;
 extern struct flash_driver xcf_flash;
@@ -147,6 +148,7 @@ static struct flash_driver *flash_drivers[] = {
 	&str9x_flash,
 	&str9xpec_flash,
 	&tms470_flash,
+	&vcm3_flash,
 	&virtual_flash,
 	&xcf_flash,
 	&xmc1xxx_flash,
