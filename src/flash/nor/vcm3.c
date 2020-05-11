@@ -13,6 +13,8 @@
 
 #define VCM3_VERSION_ID 0x4004803C
 
+#define ERASE_SECTOR_DEPENDS_ON_CODESIZE 0
+
 /* vcm3 flash csr registers */
 enum vcm3_fcsr_registers {
     FCSR_BASE = 0x40020000,
@@ -356,6 +358,8 @@ static int vcm3_auto_probe(struct flash_bank *bank)
     }
 }
 
+#if ERASE_SECTOR_DEPENDS_ON_CODESIZE
+
 static struct flash_sector *vcm3_find_sector_by_address(struct flash_bank *bank, uint32_t address)
 {
     struct vcm3_info *chip = bank->driver_priv;
@@ -369,6 +373,8 @@ static struct flash_sector *vcm3_find_sector_by_address(struct flash_bank *bank,
 
     return NULL;
 }
+
+#endif
 
 static int vcm3_erase_page(struct flash_bank *bank,
                            struct vcm3_info *chip,
@@ -515,6 +521,7 @@ static int vcm3_flash_write(struct vcm3_info *chip, uint32_t offset, const uint8
     return retval;
 }
 
+
 /* check and erase flash sectors in specified range then start a low level page
  * write. start/end must be sector aligned.
  */
@@ -522,13 +529,16 @@ static int vcm3_write_pages(struct flash_bank *bank, uint32_t start, uint32_t en
 {
     int res = ERROR_FAIL;
     struct vcm3_info *chip = bank->driver_priv;
-    struct flash_sector *sector;
-    uint32_t offset;
 
     assert(start % chip->code_page_size == 0);
     assert(end % chip->code_page_size == 0);
 
-    /* erase all sectors */
+#if ERASE_SECTOR_DEPENDS_ON_CODESIZE
+
+    struct flash_sector *sector;
+    uint32_t offset;
+
+    /* erase sectors depends on the size of the image */
     for (offset = start; offset < end; offset += chip->code_page_size) {
         sector = vcm3_find_sector_by_address(bank, offset);
         if (!sector) {
@@ -548,6 +558,24 @@ static int vcm3_write_pages(struct flash_bank *bank, uint32_t start, uint32_t en
         }
         sector->is_erased = 0;
     }
+
+#else
+
+    /* skip hwset at 0x7fc00 (sector 511) and hwset2 at 0x7f400 (sector 509) */
+
+    for (int i = 0; i < bank->num_sectors; i++) {
+	if ((i == 511) || (i == 509)) {
+	   continue;
+	}
+    	res = vcm3_erase_page(bank, chip, &bank->sectors[i]);
+    	if (res != ERROR_OK) {
+	    LOG_ERROR("failed to erase sector @ 0x%08"PRIx32, bank->sectors[i].offset);
+	    goto exit;
+    	}
+    	bank->sectors[i].is_erased = 0;
+    }
+
+#endif
 
     res = vcm3_flash_unlock(chip);
     if (res != ERROR_OK) {
