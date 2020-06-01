@@ -521,6 +521,31 @@ static int vcm3_flash_write(struct vcm3_info *chip, uint32_t offset, const uint8
     return retval;
 }
 
+#if 0
+static void memory_dump(uint8_t *ptr, int size, uint32_t addr)
+{
+    int i, j;
+
+    for (j = 0; size > 0; j++) {
+	if ((j % 2) == 0) {
+	    printf("%08X | ", addr);
+	    addr += 0x10;
+	}
+	for (i = 0; i < 8 && size > 0; i++, size--) {
+	    printf("%02X ", *ptr++);
+	}
+	printf(" ");
+	if ((j % 2) == 1) {
+	    printf("\n");
+	}
+    }
+
+    if ((j % 2) == 1) {
+	printf("\n");
+    }
+    printf("\n");
+}
+#endif
 
 /* check and erase flash sectors in specified range then start a low level page
  * write. start/end must be sector aligned.
@@ -567,6 +592,7 @@ static int vcm3_write_pages(struct flash_bank *bank, uint32_t start, uint32_t en
 	if ((i == 511) || (i == 509)) {
 	   continue;
 	}
+	//printf("erase sector at 0x%08"PRIx32"\n", bank->sectors[i].offset);
     	res = vcm3_erase_page(bank, chip, &bank->sectors[i]);
     	if (res != ERROR_OK) {
 	    LOG_ERROR("failed to erase sector @ 0x%08"PRIx32, bank->sectors[i].offset);
@@ -575,6 +601,12 @@ static int vcm3_write_pages(struct flash_bank *bank, uint32_t start, uint32_t en
     	bank->sectors[i].is_erased = 0;
     }
 
+#endif
+
+#if 0
+    uint8_t buff[0x1000];
+    default_flash_read(bank, buff, 0x7f000, 0x1000);
+    memory_dump(buff, 0x1000, 0x7f000);
 #endif
 
     res = vcm3_flash_unlock(chip);
